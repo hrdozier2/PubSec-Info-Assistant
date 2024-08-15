@@ -212,3 +212,9 @@
         bottom: 8px;
     }
 }
+
+.customIcon {
+    width: 255px; 
+    height: 148px;
+    vertical-align: middle;
+}

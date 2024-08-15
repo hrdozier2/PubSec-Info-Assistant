@@ -27,6 +27,8 @@ import { InfoContent } from "../../components/InfoContent/InfoContent";
 import { FolderPicker } from "../../components/FolderPicker";
 import { TagPickerInline } from "../../components/TagPicker";
 import React from "react";
+import usaceimg from "../../assets/usace.png"
+
 
 const Chat = () => {
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
@@ -353,9 +355,10 @@ const Chat = () => {
                             {activeChatMode == ChatMode.WorkOnly ? 
                                 <div>
                                     <div className={styles.chatEmptyStateHeader}> 
-                                        <BuildingMultipleFilled fontSize={"100px"} primaryFill={"rgba(27, 74, 239, 1)"} aria-hidden="true" aria-label="Chat with your Work Data logo" />
+                                        
+                                        <div className={styles.answerLogoWork}><img src={usaceimg} alt="Work Answer logo" className={styles.customIcon}></img></div>
                                         </div>
-                                    <h1 className={styles.chatEmptyStateTitle}>Chat with your work data</h1>
+                                    <h1 className={styles.chatEmptyStateTitle}>Chat with Contingency Operations After Action Reviews</h1>
                                 </div>
                             : activeChatMode == ChatMode.WorkPlusWeb ?
                                 <div>
@@ -438,7 +441,7 @@ const Chat = () => {
                         )}
                         <QuestionInput
                             clearOnSend
-                            placeholder="Type a new question (e.g. Who are Microsoft's top executives, provided as a table?)"
+                            placeholder="Type a new question"
                             disabled={isLoading}
                             onSend={question => makeApiRequest(question, defaultApproach, {}, {}, {})}
                             onAdjustClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)}
