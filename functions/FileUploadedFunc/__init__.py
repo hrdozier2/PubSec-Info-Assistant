@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
+import fitz
 import logging
 import os
 import json
@@ -14,6 +15,14 @@ from azure.search.documents import SearchClient
 from azure.core.credentials import AzureKeyCredential
 from shared_code.utilities_helper import UtilitiesHelper
 from urllib.parse import unquote
+import os 
+import io
+from PIL import Image
+# import torch
+# from transformers import CLIPProcessor, CLIPModel
+import fitz
+from PIL import Image
+from transformers import BlipProcessor, BlipForConditionalGeneration
 
 
 azure_blob_connection_string = os.environ["BLOB_CONNECTION_STRING"]
@@ -48,6 +57,66 @@ utilities_helper = UtilitiesHelper(
 )
 statusLog = StatusLog(cosmosdb_url, cosmosdb_key, cosmosdb_log_database_name, cosmosdb_log_container_name)
 
+def generate_image_summary(pil_image):
+    # Initialize the processor and model
+    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+    model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+
+    # Process the image
+    inputs = processor(images=pil_image, return_tensors="pt")
+
+    # Generate a caption
+    output = model.generate(**inputs)
+
+    # Decode the caption
+    caption = processor.decode(output[0], skip_special_tokens=True)
+    return caption
+
+def add_image_summary_to_index(blob_name, image_summary):
+    document = {
+        "id": statusLog.encode_document_id(blob_name),
+        "image_description": image_summary,
+    }
+    search_client = SearchClient(azure_search_service_endpoint, azure_search_service_index, AzureKeyCredential(azure_search_service_key))
+    search_client.upload_documents([document])
+
+
+def extract_images_from_pdf_and_upload(pdf_stream, blob_service_client, container_name, pdf_name):
+    """ Extracts images from a PDF and uploads them to Azure Blob Storage """
+    
+    # Open the PDF from the uploaded stream
+    pdf_document = fitz.open(stream=pdf_stream.read(), filetype="pdf")
+    
+    for page_number in range(len(pdf_document)):
+        page = pdf_document.load_page(page_number)
+        image_list = page.get_images(full=True)
+        
+        for img_index, img in enumerate(image_list):
+            xref = img[0]
+            base_image = pdf_document.extract_image(xref)
+            image_bytes = base_image["image"]
+            image_ext = base_image["ext"]
+            
+            pil_image = Image.open(io.BytesIO(image_bytes))
+            img_summary = generate_image_summary(pil_image)
+            
+            # Create image filename
+            img_filename = f"{pdf_name}_page_{page_number + 1}_image_{img_index + 1}.{image_ext}"
+            
+            # # Upload image to Azure Blob Storage 
+            # upload_blob_client = blob_service_client.get_blob_client(container=container_name, blob=img_filename)
+            # upload_blob_client.upload_blob(image_bytes, overwrite=True)
+            # logging.info(f"Uploaded {img_filename} to Azure Blob Storage")
+
+            #generate image summary
+            pil_image = Image.open(io.BytesIO(image_bytes))
+            img_summary = generate_image_summary(pil_image)
+
+            #add image summary to index
+            add_image_summary_to_index(img_filename, img_summary)
+    pdf_document.close()
+
+
 
 def get_tags_and_upload_to_cosmos(blob_service_client, blob_path):
     """ Gets the tags from the blob metadata and uploads them to cosmos db"""
@@ -80,9 +149,22 @@ def main(myblob: func.InputStream):
       
         file_extension = os.path.splitext(myblob.name)[1][1:].lower()
         if file_extension == 'pdf':
-             # If the file is a PDF a message is sent to the PDF processing queue.
+            #  # If the file is a PDF a message is sent to the PDF processing queue.
+            # queue_name = pdf_submit_queue
+
+            #Haley stuff below 
+            # If the file is a PDF, extract images and upload them to Azure Blob Storage
+            logging.info("Extracting images from uploaded PDF...")
+            
+            # Initialize Blob Service Client
+            blob_service_client = BlobServiceClient.from_connection_string(azure_blob_connection_string)
+            
+            # Extract images from the PDF and upload to Blob Storage
+            extract_images_from_pdf_and_upload(myblob, blob_service_client, azure_blob_content_container, myblob.name)
+            
+            # Proceed with sending the PDF to the queue for further processing
             queue_name = pdf_submit_queue
-  
+
         elif file_extension in ['htm', 'csv', 'doc', 'docx', 'eml', 'html', 'md', 'msg', 'ppt', 'pptx', 'txt', 'xlsx', 'xml', 'json']:
             # Else a message is sent to the non PDF processing queue
             queue_name = non_pdf_submit_queue

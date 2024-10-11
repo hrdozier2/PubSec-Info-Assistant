@@ -33,14 +33,15 @@ import usaceimg from "../../assets/usace.png"
 const Chat = () => {
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
-    const [retrieveCount, setRetrieveCount] = useState<number>(5);
+    const [retrieveCount, setRetrieveCount] = useState<number>(10);
     const [useSuggestFollowupQuestions, setUseSuggestFollowupQuestions] = useState<boolean>(false);
     const [userPersona, setUserPersona] = useState<string>("junior engineer");
-    const [systemPersona, setSystemPersona] = useState<string>("A senior level engineer at the US Army Corps of Engineers Contingency Operations");
+    const [systemPersona, setSystemPersona] = useState<string>("senior level engineer at the US Army Corps of Engineers Contingency Operations");
     // Setting responseLength to 2048 by default, this will effect the default display of the ResponseLengthButtonGroup below.
     // It must match a valid value of one of the buttons in the ResponseLengthButtonGroup.tsx file. 
     // If you update the default value here, you must also update the default value in the onResponseLengthChange method.
-    const [responseLength, setResponseLength] = useState<number>(2048);
+    // HD Note -  changed default to 3072 
+    const [responseLength, setResponseLength] = useState<number>(3072);
 
     // Setting responseTemp to 0.6 by default, this will effect the default display of the ResponseTempButtonGroup below.
     // It must match a valid value of one of the buttons in the ResponseTempButtonGroup.tsx file.
@@ -199,7 +200,7 @@ const Chat = () => {
             }
         }
         // the or value here needs to match the default value assigned to responseLength above.
-        setResponseLength(_ev.target.value as number || 2048)
+        setResponseLength(_ev.target.value as number || 3072)
     };
 
     const onResponseTempChange = (_ev: any) => {

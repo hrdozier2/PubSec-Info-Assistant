@@ -16,6 +16,10 @@ import nltk
 # Try to download using nltk.download
 nltk.download('punkt')
 from bs4 import BeautifulSoup
+from PIL import Image
+import torch
+from transformers import CLIPProcessor, CLIPModel
+import fitz
 
 punkt_dir = os.path.join(nltk.data.path[0], 'tokenizers/punkt')
 
